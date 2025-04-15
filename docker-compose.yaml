@@ -8,6 +8,23 @@ services:
     restart: unless-stopped
     image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
 
+  model-downloader:
+    image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
+    depends_on:
+      - ollama
+    restart: "no"
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "Waiting for Ollama to be ready..."
+        until ollama list > /dev/null 2>&1; do
+          sleep 2
+        done
+        echo "Downloading model: hf.co/mradermacher/Llama-PLLuM-8B-instruct-GGUF:Q4_K_S"
+        ollama pull "hf.co/mradermacher/Llama-PLLuM-8B-instruct-GGUF:Q4_K_S"
+
   open-webui:
     build:
       context: .
@@ -20,6 +37,7 @@ services:
       - open-webui:/app/backend/data
     depends_on:
       - ollama
+      - model-downloader
     ports:
       - ${OPEN_WEBUI_PORT-3000}:8080
     environment:
